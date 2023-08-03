@@ -1,7 +1,7 @@
 package com.jpswcons.auctioneer.web.controller;
 
 import com.jpswcons.auctioneer.data.entities.Auction;
-import com.jpswcons.auctioneer.data.repositories.AuctionRepository;
+import com.jpswcons.auctioneer.services.AuctionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,16 +15,16 @@ import java.util.Optional;
 @RequestMapping("/v1/auctions")
 public class AuctionController {
 
-    private final AuctionRepository auctionRepository;
+    private final AuctionService auctionService;
 
     @Autowired
-    public AuctionController(AuctionRepository auctionRepository) {
-        this.auctionRepository = auctionRepository;
+    public AuctionController(AuctionService auctionService) {
+        this.auctionService = auctionService;
     }
 
     @GetMapping
     public ResponseEntity<List<Auction>> getAuctions() {
-        List<Auction> auctions = auctionRepository.findAll();
+        List<Auction> auctions = auctionService.getAuctions();
         return ResponseEntity.of(Optional.of(auctions));
     }
 
