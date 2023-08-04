@@ -1,0 +1,8 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: "auctioneer_metrics"
+    metrics_path: "/auctioneer/actuator/prometheus"
+    static_configs:
+      - targets: ["auctioneer:8080"]
