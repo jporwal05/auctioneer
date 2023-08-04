@@ -43,7 +43,7 @@ public class BidService {
                     .validate();
             if (isValidBid) {
                 Bid savedBid = bidRepository.save(Bid.builder()
-                        .auction(auction)
+                        .auctionId(auction.getId())
                         .bidderId(bidDto.getBidderId())
                         .amount(bidDto.getAmount())
                         .build());

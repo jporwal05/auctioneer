@@ -37,7 +37,7 @@ public class BidValidator {
         if (isValidBid) {
             if (!isFirstBid) {
                 Optional.ofNullable(auction.getWinningBid())
-                        .ifPresent(b -> isValidBid = amount >= b.getAmount() + b.getAuction().getStepPrice());
+                        .ifPresent(b -> isValidBid = amount >= b.getAmount() + auction.getStepPrice());
             } else {
                 isValidBid = amount >= auction.getStartingPrice() + auction.getStepPrice();
             }
