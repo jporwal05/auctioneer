@@ -19,7 +19,7 @@ public class BidValidator {
 
     public BidValidator isFirstBid() {
         if (isValidBid) {
-            Optional.ofNullable(auction.getWinningBid()).ifPresent(b -> isFirstBid = true);
+            Optional.ofNullable(auction.getWinningBid()).ifPresentOrElse(b -> {}, () -> isFirstBid = true);
         }
         return this;
     }
@@ -42,7 +42,7 @@ public class BidValidator {
                 isValidBid = amount >= auction.getStartingPrice() + auction.getStepPrice();
             }
         }
-        return null;
+        return this;
     }
 
 

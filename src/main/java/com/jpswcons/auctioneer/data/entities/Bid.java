@@ -11,11 +11,14 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
 @Data
-@Entity
+@Entity(name = "bids")
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
@@ -26,9 +29,12 @@ public class Bid {
     @ManyToOne
     @JoinColumn(name = "auction_id")
     @JsonIgnore
+    @ToString.Exclude
     private Auction auction;
     private long bidderId;
     private long amount;
+    @CreationTimestamp
     private LocalDateTime createdTime;
+    @UpdateTimestamp
     private LocalDateTime updatedTime;
 }

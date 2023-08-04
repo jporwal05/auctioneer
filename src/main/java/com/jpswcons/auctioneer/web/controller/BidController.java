@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/v1/bid")
+@RequestMapping("/v1/bids")
 @Log4j2
 public class BidController {
 
@@ -24,14 +24,13 @@ public class BidController {
     @PostMapping
     public ResponseEntity<Boolean> placeBid(@RequestBody BidDto bidDto) {
         try {
-            bidService.placeBid(bidDto);
+            return ResponseEntity.ok(bidService.placeBid(bidDto));
         } catch (Exception e) {
             log.error("Error placing bid: {}", e.getMessage());
             if (e instanceof OptimisticLockException) {
                 log.error("Bid outdated: {}", e.getMessage());
             }
-            return ResponseEntity.ok(false);
         }
-        return ResponseEntity.ok(true);
+        return ResponseEntity.ok(false);
     }
 }
