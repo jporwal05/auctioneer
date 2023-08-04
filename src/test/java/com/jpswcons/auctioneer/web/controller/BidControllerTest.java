@@ -66,7 +66,7 @@ public class BidControllerTest {
                         return result;
                     }));
                 }
-                i = 28;
+                i = 27;
             } else {
                 HttpHeaders headers = new HttpHeaders();
                 headers.setContentType(MediaType.APPLICATION_JSON);
