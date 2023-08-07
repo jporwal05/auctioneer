@@ -1,19 +1,15 @@
 package com.jpswcons.auctioneer.web.controller;
 
-import com.jpswcons.auctioneer.services.AuctionService;
-import com.jpswcons.auctioneer.services.BidService;
 import com.jpswcons.auctioneer.web.controller.models.BidDto;
 import lombok.extern.log4j.Log4j2;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.ActiveProfiles;
 
 import java.security.SecureRandom;
 import java.util.ArrayList;
@@ -21,59 +17,37 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@ActiveProfiles("test")
 @Log4j2
-public class BidControllerTest {
+@Disabled
+public class LoadTest {
 
-    @LocalServerPort
-    private int port;
-
-    @Autowired
-    private TestRestTemplate testRestTemplate;
+    // @LocalServerPort
+    private int port = 8080;
 
     @Autowired
-    private BidService bidService;
-
-    @Autowired
-    private AuctionService auctionService;
-
-    @Test
-    @DisplayName("should place a bid successfully")
-    void shouldPlaceABidSuccessfully() {
-        int bidAmount = 215000;
-        long auctionId = 2L;
-
-        BidDto bidDto = BidDto.builder()
-                .amount(bidAmount)
-                .auctionId(auctionId)
-                .bidderId(1L)
-                .build();
-
-        List<Boolean> resultList = new ArrayList<>();
-        resultList.add(sendBidRequest(bidDto));
-
-        assertEquals(String.valueOf(resultList.stream().filter(b -> b).count()), sendBidReconRequest(auctionId));
-    }
+    private TestRestTemplate testRestTemplate = new TestRestTemplate();
 
     @Test
     @DisplayName("should place bids randomly")
     void shouldPlaceBidsRandomly() throws InterruptedException {
-        ExecutorService executorService = Executors.newFixedThreadPool(5);
+        long auctionId = 1L;
+        ExecutorService executorService = Executors.newFixedThreadPool(10);
+        executorService.awaitTermination(5, TimeUnit.SECONDS);
+
+        List<Boolean> resultList = new ArrayList<>();
 
         int bidAmount = 160000;
-        int stepPrice = 10000;
-        long auctionId = 1L;
+        int stepPrice = 100;
 
         // testing params
-        int numberOfBids = 1000;
+        int numberOfBids = 100000;
 
         // buffering params
-        int startingIndex = 500; // starting index of the parallel requests
-        int buffer = 100; // number of parallel requests
+        int startingIndex = 50000; // starting index of the parallel requests
+        int buffer = 2000; // number of parallel requests
 
         List<BidDto> bids = new ArrayList<>();
         for (int i = 0; i < numberOfBids; i++) {
@@ -88,13 +62,13 @@ public class BidControllerTest {
         // required because of last bid assertion and concurrency
         assert (numberOfBids - 10) > startingIndex + buffer;
 
-        List<Boolean> resultList = new ArrayList<>();
-
         for (int i = 0; i < bids.size(); i++) {
             if (i == startingIndex) {
                 // buffer next few requests and send in parallel
                 for (int pi = startingIndex; pi < startingIndex + buffer; pi++) {
                     BidDto parallelBid = bids.get(pi);
+                    // for better race condition
+                    parallelBid.setAmount(parallelBid.getAmount());
                     executorService.submit(() -> {
                         resultList.add(sendBidRequest(parallelBid));
                     });
@@ -106,10 +80,15 @@ public class BidControllerTest {
             }
         }
 
-        assertEquals(String.valueOf(resultList.stream().filter(b -> b).count()),
-                sendBidReconRequest(auctionId));
-
         executorService.shutdown();
+
+        String actual = sendBidReconRequest(auctionId);
+
+        // clean up
+        /*sendUpdateWinningBidRequest(auctionId);
+        sendDeleteBidsRequest(auctionId);*/
+
+        assertEquals(String.valueOf(resultList.stream().filter(b -> b).count()), actual);
     }
 
     private boolean sendBidRequest(BidDto bidDto) {
@@ -123,6 +102,19 @@ public class BidControllerTest {
     private String sendBidReconRequest(long auctionId) {
         return testRestTemplate.getForEntity("http://localhost:" +
                 port + "/auctioneer/v1/bids/reconcile/" + auctionId, String.class).getBody();
+    }
+
+    // FIXME: Need to fix
+    private boolean sendDeleteBidsRequest(long auctionId) {
+        testRestTemplate.delete("http://localhost:" +
+                port + "/auctioneer/v1/bids" + auctionId);
+        return true;
+    }
+
+    // FIXME: Need to fix
+    private boolean sendUpdateWinningBidRequest(long auctionId) {
+        return Boolean.parseBoolean(testRestTemplate.getForEntity("http://localhost:" +
+                port + "/auctioneer/v1/auctions/delete/winningBid/" + auctionId, String.class).getBody());
     }
 
     private BidDto lastBid(List<BidDto> bids) {

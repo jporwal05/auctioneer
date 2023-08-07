@@ -4,13 +4,26 @@
 - Requires jdk 11
 - ```mvnw clean install```
 
-## docker (for author's use for now)
+## docker - for running with prometheus
 - ```mvnw clean install```
-- ```docker build -t jporwal05/auctioneer:latest .```
-- ```docker push jporwal05/auctioneer:latest```
+- ```docker build -t auctioneer:latest .```
 - ```docker-compose up```
+- Run the test in ```LoadTest.java```
 
-### prometheus
+### load test
+- Make sure that the server is running separately - you can run the ```AuctioneerApplication.java``` from your IDE directly.
+- Run the test in ```LoadTest.java```
+- After the test is run, do a clean-up using below two curls.
+```curl
+curl --location 'http://localhost:8080/auctioneer/v1/auctions/delete/winningBid/1'
+```
+```curl
+curl --location --request DELETE 'http://localhost:8080/auctioneer/v1/bids/1'
+```
+
+Note: The above two endpoints are just a temporary hack.
+
+### prometheus for visualizations - need to be refined
 - ```http://localhost:9090/```
 
 ## bid

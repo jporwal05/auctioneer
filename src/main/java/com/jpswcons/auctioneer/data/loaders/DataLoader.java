@@ -42,15 +42,15 @@ public class DataLoader implements CommandLineRunner {
                         .endTime(LocalDateTime.now().plusHours(1))
                         .status(Auction.AuctionStatus.LIVE)
                         .startingPrice(150000)
-                        .stepPrice(10000).build(),
+                        .stepPrice(100).build(),
                 Auction.builder()
                         .company(savedCompanies.get(1))
                         .itemName("IC-355")
-                        .startTime(LocalDateTime.now().plusMinutes(10L))
-                        .endTime(LocalDateTime.now().plusMinutes(10L).plusHours(1))
-                        .status(Auction.AuctionStatus.UPCOMING)
+                        .startTime(LocalDateTime.now())
+                        .endTime(LocalDateTime.now().plusHours(1))
+                        .status(Auction.AuctionStatus.LIVE)
                         .startingPrice(200000)
-                        .stepPrice(15000).build()
+                        .stepPrice(100).build()
                 );
         auctionRepository.saveAll(auctions);
         log.info("Loaded company and auction data");

@@ -12,5 +12,7 @@ public interface BidRepository extends JpaRepository<Bid, Long> {
 
     Optional<List<Bid>> findByAuctionIdOrderByCreatedTimeAsc(Long auctionId);
 
+    void deleteByAuctionId(Long auctionId);
+
 
 }

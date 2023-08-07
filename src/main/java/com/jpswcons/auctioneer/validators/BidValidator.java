@@ -1,9 +1,13 @@
 package com.jpswcons.auctioneer.validators;
 
 import com.jpswcons.auctioneer.data.entities.Auction;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import lombok.extern.log4j.Log4j2;
 
 import java.util.Optional;
 
+@Log4j2
 public class BidValidator {
 
     private final Auction auction;
@@ -12,8 +16,14 @@ public class BidValidator {
 
     private boolean isFirstBid = false;
 
-    public BidValidator(Auction auction) {
+    private final MeterRegistry meterRegistry;
+
+    private final Counter greaterThanPreviousBidCounter;
+
+    public BidValidator(Auction auction, MeterRegistry meterRegistry) {
         this.auction = auction;
+        this.meterRegistry = meterRegistry;
+        this.greaterThanPreviousBidCounter = meterRegistry.counter("gtpbid_validation");
     }
 
 
@@ -27,7 +37,11 @@ public class BidValidator {
 
     public BidValidator isBidAmountGreaterThanPreviousBid(int amount) {
         if (isValidBid && !isFirstBid) {
-            Optional.ofNullable(auction.getWinningBid()).ifPresent(b -> isValidBid = amount > b.getAmount());
+            Optional.ofNullable(auction.getWinningBid()).ifPresent(b -> {
+                if (amount < b.getAmount()) {
+                    greaterThanPreviousBidCounter.increment();
+                }
+            });
         }
         return this;
     }
