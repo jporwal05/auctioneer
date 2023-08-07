@@ -68,8 +68,15 @@ public class BidControllerTest {
         int bidAmount = 160000;
         int stepPrice = 10000;
 
+        // testing params
+        int numberOfBids = 1000;
+
+        // buffering params
+        int startingIndex = 500; // starting index of the parallel requests
+        int buffer = 100; // number of parallel requests
+
         List<BidDto> bids = new ArrayList<>();
-        for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < numberOfBids; i++) {
             bids.add(BidDto.builder()
                     .amount(bidAmount)
                     .auctionId(1L)
@@ -78,16 +85,12 @@ public class BidControllerTest {
             bidAmount = bidAmount + stepPrice;
         }
 
-        // buffering params
-        int buffer = 20;
-        int startingIndex = 23;
-
         // required because of last bid assertion and concurrency
-        assert (bids.size() - 10) > startingIndex + buffer;
+        assert (numberOfBids - 10) > startingIndex + buffer;
 
         for (int i = 0; i < bids.size(); i++) {
             if (i == startingIndex) {
-                // buffer next 5 requests and send in parallel
+                // buffer next few requests and send in parallel
                 for (int pi = startingIndex; pi < startingIndex + buffer; pi++) {
                     BidDto parallelBid = bids.get(pi);
                     executorService.submit(() -> {
