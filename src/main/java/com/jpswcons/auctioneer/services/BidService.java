@@ -45,7 +45,7 @@ public class BidService {
 
     @Transactional
     @Timed("placeBid")
-    @Retryable(retryFor = ObjectOptimisticLockingFailureException.class,
+    @Retryable(value = ObjectOptimisticLockingFailureException.class,
             maxAttempts = 2, backoff = @Backoff(delay = 50))
     public boolean placeBid(BidDto bidDto) {
         Auction auction = auctionService.getAuction(bidDto.getAuctionId());
