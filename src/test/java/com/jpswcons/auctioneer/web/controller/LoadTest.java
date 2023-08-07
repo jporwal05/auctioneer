@@ -1,14 +1,12 @@
 package com.jpswcons.auctioneer.web.controller;
 
+import com.jpswcons.auctioneer.TestRestUtils;
 import com.jpswcons.auctioneer.web.controller.models.BidDto;
 import lombok.extern.log4j.Log4j2;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,10 +19,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @Disabled
 public class LoadTest {
 
-    // @LocalServerPort
-    private final int port = 8080;
+    private final TestRestUtils restUtils = new TestRestUtils(8080,new TestRestTemplate());
 
-    private final TestRestTemplate testRestTemplate = new TestRestTemplate();
 
     @Test
     @DisplayName("should place bids randomly")
@@ -65,52 +61,25 @@ public class LoadTest {
                     // for better race condition
                     parallelBid.setAmount(parallelBid.getAmount());
                     executorService.submit(() -> {
-                        resultList.add(sendBidRequest(auctionId, parallelBid));
+                        resultList.add(restUtils.sendBidRequest(auctionId, parallelBid));
                     });
                 }
                 // resume i
-                i = startingIndex + buffer - 1;
+                i = startingIndex + buffer;
             } else {
-                resultList.add(sendBidRequest(auctionId, bids.get(i)));
+                resultList.add(restUtils.sendBidRequest(auctionId, bids.get(i)));
             }
         }
 
         executorService.shutdown();
 
-        String actual = sendBidReconRequest(auctionId);
+        String actual = restUtils.sendBidReconRequest(auctionId);
 
         // clean up
-        sendResetWinningBidRequest(auctionId);
-        sendDeleteBidsRequest(auctionId);
+        restUtils.sendResetWinningBidRequest(auctionId);
+        restUtils.sendDeleteBidsRequest(auctionId);
 
         assertEquals(String.valueOf(resultList.stream().filter(b -> b).count()), actual);
-    }
-
-    private boolean sendBidRequest(long auctionId, BidDto bidDto) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<BidDto> entity = new HttpEntity<>(bidDto, headers);
-        return Boolean.parseBoolean(testRestTemplate.postForEntity("http://localhost:" +
-                port + "/auctioneer/v1/auctions/" + auctionId + "/bid", entity, String.class).getBody());
-    }
-
-    private String sendBidReconRequest(long auctionId) {
-        return testRestTemplate.getForEntity("http://localhost:" +
-                port + "/auctioneer/v1/auctions/" + auctionId + "/reconcile", String.class).getBody();
-    }
-
-    private boolean sendDeleteBidsRequest(long auctionId) {
-        testRestTemplate.delete("http://localhost:" +
-                port + "/auctioneer/v1/auctions/" + auctionId + "/bids");
-        return true;
-    }
-
-    private boolean sendResetWinningBidRequest(long auctionId) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<BidDto> entity = new HttpEntity<>(null, headers);
-        return Boolean.parseBoolean(testRestTemplate.postForEntity("http://localhost:" +
-                port + "/auctioneer/v1/auctions/" + auctionId + "/resetWinningBid", entity, String.class).getBody());
     }
 
 }
