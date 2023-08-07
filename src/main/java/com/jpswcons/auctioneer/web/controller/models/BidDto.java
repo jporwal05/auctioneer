@@ -6,7 +6,6 @@ import lombok.Data;
 @Data
 @Builder
 public class BidDto {
-    private long auctionId;
     private long bidderId;
     private int amount;
 }

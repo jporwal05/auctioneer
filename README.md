@@ -6,7 +6,6 @@
 
 ## docker - for running with prometheus
 - ```mvnw clean install```
-- In case the test fails due to concurrency issues
 - ```docker build -t auctioneer:latest .```
 - ```docker-compose up```
 - Run the test in ```LoadTest.java```
@@ -14,13 +13,7 @@
 ### load test
 - Make sure that the server is running separately - you can run the ```AuctioneerApplication.java``` from your IDE directly.
 - Run the test in ```LoadTest.java```
-- After the test is run, do a clean-up using below two curls.
-```curl
-curl --location 'http://localhost:8080/auctioneer/v1/auctions/delete/winningBid/1'
-```
-```curl
-curl --location --request DELETE 'http://localhost:8080/auctioneer/v1/bids/1'
-```
+- The test cleans up after itself.
 
 Note: The above two endpoints are just a temporary hack.
 
@@ -29,17 +22,16 @@ Note: The above two endpoints are just a temporary hack.
 
 ## bid
 ```curl
-curl --location 'http://localhost:8080/auctioneer/v1/bids' \
+curl --location 'http://localhost:8080/auctioneer/v1/auctions/1/bid' \
 --header 'Content-Type: application/json' \
 --data '{
-    "auctionId": 1,
     "bidderId": 1,
     "amount": 160000
 }'
 ```
 
 ## best way to understand is to run JUnits
-- Run/Debug tests in ```BidControllerTest.java``` and observe the logs.
+- Run/Debug tests in ```AuctionControllerTest.java``` and observe the logs.
 - Ignore ```HHH000010: On release of batch it still contained JDBC statements``` as this is expected from the failing transaction.
 
 ## logic

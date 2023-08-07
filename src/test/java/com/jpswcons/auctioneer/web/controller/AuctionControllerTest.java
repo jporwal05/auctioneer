@@ -1,18 +1,15 @@
 package com.jpswcons.auctioneer.web.controller;
 
-import com.jpswcons.auctioneer.services.AuctionService;
-import com.jpswcons.auctioneer.services.BidService;
+import com.jpswcons.auctioneer.TestRestUtils;
 import com.jpswcons.auctioneer.web.controller.models.BidDto;
 import lombok.extern.log4j.Log4j2;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.security.SecureRandom;
@@ -27,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 @Log4j2
-public class BidControllerTest {
+public class AuctionControllerTest {
 
     @LocalServerPort
     private int port;
@@ -35,11 +32,12 @@ public class BidControllerTest {
     @Autowired
     private TestRestTemplate testRestTemplate;
 
-    @Autowired
-    private BidService bidService;
+    private TestRestUtils testRestUtils;
 
-    @Autowired
-    private AuctionService auctionService;
+    @BeforeEach
+    void setUp() {
+        testRestUtils = new TestRestUtils(port, testRestTemplate);
+    }
 
     @Test
     @DisplayName("should place a bid successfully")
@@ -49,14 +47,13 @@ public class BidControllerTest {
 
         BidDto bidDto = BidDto.builder()
                 .amount(bidAmount)
-                .auctionId(auctionId)
                 .bidderId(1L)
                 .build();
 
         List<Boolean> resultList = new ArrayList<>();
-        resultList.add(sendBidRequest(bidDto));
+        resultList.add(testRestUtils.sendBidRequest(auctionId, bidDto));
 
-        assertEquals(String.valueOf(resultList.stream().filter(b -> b).count()), sendBidReconRequest(auctionId));
+        assertEquals(String.valueOf(resultList.stream().filter(b -> b).count()), testRestUtils.sendBidReconRequest(auctionId));
     }
 
     @Test
@@ -79,7 +76,6 @@ public class BidControllerTest {
         for (int i = 0; i < numberOfBids; i++) {
             bids.add(BidDto.builder()
                     .amount(bidAmount)
-                    .auctionId(auctionId)
                     .bidderId(i + 1L)
                     .build());
             bidAmount = bidAmount + stepPrice;
@@ -96,33 +92,20 @@ public class BidControllerTest {
                 for (int pi = startingIndex; pi < startingIndex + buffer; pi++) {
                     BidDto parallelBid = bids.get(pi);
                     executorService.submit(() -> {
-                        resultList.add(sendBidRequest(parallelBid));
+                        resultList.add(testRestUtils.sendBidRequest(auctionId, parallelBid));
                     });
                 }
                 // resume i
-                i = startingIndex + buffer - 1;
+                i = startingIndex + buffer;
             } else {
-                resultList.add(sendBidRequest(bids.get(i)));
+                resultList.add(testRestUtils.sendBidRequest(auctionId, bids.get(i)));
             }
         }
 
         assertEquals(String.valueOf(resultList.stream().filter(b -> b).count()),
-                sendBidReconRequest(auctionId));
+                testRestUtils.sendBidReconRequest(auctionId));
 
         executorService.shutdown();
-    }
-
-    private boolean sendBidRequest(BidDto bidDto) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<BidDto> entity = new HttpEntity<>(bidDto, headers);
-        return Boolean.parseBoolean(testRestTemplate.postForEntity("http://localhost:" +
-                port + "/auctioneer/v1/bids", entity, String.class).getBody());
-    }
-
-    private String sendBidReconRequest(long auctionId) {
-        return testRestTemplate.getForEntity("http://localhost:" +
-                port + "/auctioneer/v1/bids/reconcile/" + auctionId, String.class).getBody();
     }
 
     private BidDto lastBid(List<BidDto> bids) {
