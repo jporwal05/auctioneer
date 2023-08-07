@@ -1,7 +1,5 @@
 package com.jpswcons.auctioneer.web.controller;
 
-import com.jpswcons.auctioneer.services.AuctionService;
-import com.jpswcons.auctioneer.services.BidService;
 import com.jpswcons.auctioneer.web.controller.models.BidDto;
 import lombok.extern.log4j.Log4j2;
 import org.junit.jupiter.api.DisplayName;
@@ -27,19 +25,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 @Log4j2
-public class BidControllerTest {
+public class AuctionControllerTest {
 
     @LocalServerPort
     private int port;
 
     @Autowired
     private TestRestTemplate testRestTemplate;
-
-    @Autowired
-    private BidService bidService;
-
-    @Autowired
-    private AuctionService auctionService;
 
     @Test
     @DisplayName("should place a bid successfully")
@@ -49,12 +41,11 @@ public class BidControllerTest {
 
         BidDto bidDto = BidDto.builder()
                 .amount(bidAmount)
-                .auctionId(auctionId)
                 .bidderId(1L)
                 .build();
 
         List<Boolean> resultList = new ArrayList<>();
-        resultList.add(sendBidRequest(bidDto));
+        resultList.add(sendBidRequest(auctionId, bidDto));
 
         assertEquals(String.valueOf(resultList.stream().filter(b -> b).count()), sendBidReconRequest(auctionId));
     }
@@ -79,7 +70,6 @@ public class BidControllerTest {
         for (int i = 0; i < numberOfBids; i++) {
             bids.add(BidDto.builder()
                     .amount(bidAmount)
-                    .auctionId(auctionId)
                     .bidderId(i + 1L)
                     .build());
             bidAmount = bidAmount + stepPrice;
@@ -96,13 +86,13 @@ public class BidControllerTest {
                 for (int pi = startingIndex; pi < startingIndex + buffer; pi++) {
                     BidDto parallelBid = bids.get(pi);
                     executorService.submit(() -> {
-                        resultList.add(sendBidRequest(parallelBid));
+                        resultList.add(sendBidRequest(auctionId, parallelBid));
                     });
                 }
                 // resume i
                 i = startingIndex + buffer - 1;
             } else {
-                resultList.add(sendBidRequest(bids.get(i)));
+                resultList.add(sendBidRequest(auctionId, bids.get(i)));
             }
         }
 
@@ -112,17 +102,17 @@ public class BidControllerTest {
         executorService.shutdown();
     }
 
-    private boolean sendBidRequest(BidDto bidDto) {
+    private boolean sendBidRequest(long auctionId, BidDto bidDto) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<BidDto> entity = new HttpEntity<>(bidDto, headers);
         return Boolean.parseBoolean(testRestTemplate.postForEntity("http://localhost:" +
-                port + "/auctioneer/v1/bids", entity, String.class).getBody());
+                port + "/auctioneer/v1/auctions/" + auctionId + "/bid", entity, String.class).getBody());
     }
 
     private String sendBidReconRequest(long auctionId) {
         return testRestTemplate.getForEntity("http://localhost:" +
-                port + "/auctioneer/v1/bids/reconcile/" + auctionId, String.class).getBody();
+                port + "/auctioneer/v1/auctions/" + auctionId + "/reconcile", String.class).getBody();
     }
 
     private BidDto lastBid(List<BidDto> bids) {
