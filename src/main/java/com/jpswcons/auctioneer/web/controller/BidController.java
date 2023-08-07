@@ -27,7 +27,7 @@ public class BidController {
             return ResponseEntity.ok(bidService.placeBid(bidDto));
         } catch (Exception e) {
             if (e instanceof ObjectOptimisticLockingFailureException) {
-                log.error("Bid outdated: {}", e.getMessage());
+                log.warn("Bid outdated: {}", e.getMessage());
             } else {
                 log.error("Error placing bid: {}", e.getMessage());
             }

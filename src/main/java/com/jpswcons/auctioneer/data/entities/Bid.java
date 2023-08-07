@@ -24,7 +24,7 @@ public class Bid {
     private long id;
     private long auctionId;
     private long bidderId;
-    private long amount;
+    private int amount;
     @CreationTimestamp
     private LocalDateTime createdTime;
     @UpdateTimestamp

@@ -10,6 +10,9 @@ import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,6 +45,8 @@ public class BidService {
 
     @Transactional
     @Timed("placeBid")
+    @Retryable(retryFor = ObjectOptimisticLockingFailureException.class,
+            maxAttempts = 2, backoff = @Backoff(delay = 50))
     public boolean placeBid(BidDto bidDto) {
         Auction auction = auctionService.getAuction(bidDto.getAuctionId());
         if (auction.getStatus().equals(Auction.AuctionStatus.UPCOMING)
@@ -69,17 +74,18 @@ public class BidService {
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public boolean reconcileBids(long auctionId) {
+        boolean isSuccessful = true;
         List<Bid> bids = bidRepository.findByAuctionIdOrderByCreatedTimeAsc(auctionId).orElseThrow();
         if (bids.size() > 1) {
             log.info("{} bids found for the auction", bids.size());
-            return IntStream.range(0, bids.size() - 1)
+            isSuccessful = IntStream.range(0, bids.size() - 1)
                     .allMatch(i -> bids.get(i).getAmount() < bids.get(i + 1).getAmount());
         } else if (bids.size() == 1) {
             log.info("One bid found for the auction");
-            return true;
         } else {
             log.info("No bids found for the auction");
-            return true;
         }
+        log.info("Reconciliation status: {}", isSuccessful ? "SUCCESS": "FAILED");
+        return isSuccessful;
     }
 }

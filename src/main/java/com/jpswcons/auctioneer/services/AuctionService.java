@@ -2,7 +2,9 @@ package com.jpswcons.auctioneer.services;
 
 import com.jpswcons.auctioneer.data.entities.Auction;
 import com.jpswcons.auctioneer.data.repositories.AuctionRepository;
+import com.jpswcons.auctioneer.web.controller.models.BidDto;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -20,7 +22,7 @@ public class AuctionService {
         this.statusUpdaterService = statusUpdaterService;
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public List<Auction> getAuctions() {
         List<Auction> auctions = auctionRepository.findAll();
         // update status to LIVE or FINISHED by comparing against now()
@@ -30,7 +32,7 @@ public class AuctionService {
         return auctions;
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.READ_UNCOMMITTED)
     public Auction getAuction(long id) {
         Auction auction = auctionRepository.findById(id).orElseThrow();
         // update status to LIVE or FINISHED by comparing against now()
@@ -39,4 +41,15 @@ public class AuctionService {
         auctionRepository.save(auction);
         return auction;
     }
+
+    @Transactional
+    public BidDto getWinningBid(long auctionId) {
+        Auction auction = auctionRepository.findById(auctionId).orElseThrow();
+        return BidDto.builder()
+                .bidderId(auction.getWinningBid().getBidderId())
+                .auctionId(auctionId)
+                .amount(auction.getWinningBid().getAmount())
+                .build();
+    }
+
 }
