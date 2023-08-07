@@ -2,9 +2,9 @@ package com.jpswcons.auctioneer.web.controller;
 
 import com.jpswcons.auctioneer.services.BidService;
 import com.jpswcons.auctioneer.web.controller.models.BidDto;
-import jakarta.persistence.OptimisticLockException;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.ResponseEntity;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -26,9 +26,10 @@ public class BidController {
         try {
             return ResponseEntity.ok(bidService.placeBid(bidDto));
         } catch (Exception e) {
-            log.error("Error placing bid: {}", e.getMessage());
-            if (e instanceof OptimisticLockException) {
+            if (e instanceof ObjectOptimisticLockingFailureException) {
                 log.error("Bid outdated: {}", e.getMessage());
+            } else {
+                log.error("Error placing bid: {}", e.getMessage());
             }
         }
         return ResponseEntity.ok(false);

@@ -2,8 +2,8 @@ package com.jpswcons.auctioneer.services;
 
 import com.jpswcons.auctioneer.data.entities.Auction;
 import com.jpswcons.auctioneer.data.repositories.AuctionRepository;
-import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -31,7 +31,7 @@ public class AuctionService {
     }
 
     @Transactional
-    public Auction getAuction(Long id) {
+    public Auction getAuction(long id) {
         Auction auction = auctionRepository.findById(id).orElseThrow();
         // update status to LIVE or FINISHED by comparing against now()
         // this is a workaround to avoid using cron or something similar
