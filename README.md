@@ -6,6 +6,7 @@
 
 ## docker - for running with prometheus
 - ```mvnw clean install```
+- In case the test fails due to concurrency issues
 - ```docker build -t auctioneer:latest .```
 - ```docker-compose up```
 - Run the test in ```LoadTest.java```
