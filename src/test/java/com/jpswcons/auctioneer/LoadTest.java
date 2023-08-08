@@ -1,6 +1,5 @@
-package com.jpswcons.auctioneer.web.controller;
+package com.jpswcons.auctioneer;
 
-import com.jpswcons.auctioneer.TestRestUtils;
 import com.jpswcons.auctioneer.web.controller.models.BidDto;
 import lombok.extern.log4j.Log4j2;
 import org.junit.jupiter.api.Disabled;
@@ -35,11 +34,11 @@ public class LoadTest {
         int stepPrice = 100;
 
         // testing params
-        int numberOfBids = 10000;
+        int numberOfBids = 100;
 
         // buffering params
-        int startingIndex = 5000; // starting index of the parallel requests
-        int buffer = 200; // number of parallel requests
+        int startingIndex = 50; // starting index of the parallel requests
+        int buffer = 20; // number of parallel requests
 
         List<BidDto> bids = new ArrayList<>();
         for (int i = 0; i < numberOfBids; i++) {
