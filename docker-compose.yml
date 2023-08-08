@@ -1,7 +1,7 @@
 version: "3"
 services:
   auctioneer:
-    image: jporwal05/auctioneer:latest
+    image: jporwal05/auctioneer:ol
     ports:
       - "8080:8080"
   prometheus:
