@@ -34,11 +34,11 @@ public class LoadTest {
         int stepPrice = 100;
 
         // testing params
-        int numberOfBids = 100;
+        int numberOfBids = 10000;
 
         // buffering params
-        int startingIndex = 50; // starting index of the parallel requests
-        int buffer = 20; // number of parallel requests
+        int startingIndex = 5000; // starting index of the parallel requests
+        int buffer = 200; // number of parallel requests
 
         List<BidDto> bids = new ArrayList<>();
         for (int i = 0; i < numberOfBids; i++) {

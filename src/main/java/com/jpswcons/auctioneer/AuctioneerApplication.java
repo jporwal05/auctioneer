@@ -7,6 +7,8 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.retry.annotation.EnableRetry;
 
 @SpringBootApplication
@@ -26,6 +28,14 @@ public class AuctioneerApplication {
 	@Bean
 	public TimedAspect timedAspect(MeterRegistry registry) {
 		return new TimedAspect(registry);
+	}
+
+	@Bean
+	public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
+		RedisTemplate<String, Object> template = new RedisTemplate<>();
+		template.setConnectionFactory(connectionFactory);
+		template.setEnableTransactionSupport(true);
+		return template;
 	}
 
 }

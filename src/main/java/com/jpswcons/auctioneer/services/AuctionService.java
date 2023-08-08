@@ -8,10 +8,16 @@ import com.jpswcons.auctioneer.web.controller.models.BidDto;
 import io.micrometer.core.annotation.Timed;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.dao.DataAccessException;
+import org.springframework.data.redis.core.RedisOperations;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.SessionCallback;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.stream.IntStream;
 
@@ -27,13 +33,17 @@ public class AuctionService {
 
     private final BidService bidService;
 
+    private final RedisTemplate<String, Object> redisTemplate;
+
     public AuctionService(AuctionRepository auctionRepository,
                           StatusUpdaterService statusUpdaterService,
-                          MeterRegistry meterRegistry, BidService bidService) {
+                          MeterRegistry meterRegistry, BidService bidService,
+                          RedisTemplate<String, Object> redisTemplate) {
         this.auctionRepository = auctionRepository;
         this.statusUpdaterService = statusUpdaterService;
         this.meterRegistry = meterRegistry;
         this.bidService = bidService;
+        this.redisTemplate = redisTemplate;
     }
 
     @Transactional
@@ -61,27 +71,38 @@ public class AuctionService {
     /*@Retryable(value = ObjectOptimisticLockingFailureException.class,
             maxAttempts = 2, backoff = @Backoff(delay = 50))*/
     public boolean placeBid(long auctionId, BidDto bidDto) {
-        Auction auction = auctionRepository.findById(auctionId).orElseThrow();
-        if (auction.getStatus().equals(Auction.AuctionStatus.UPCOMING)
-                || auction.getStatus().equals(Auction.AuctionStatus.FINISHED)) {
-            return false;
-        }
-        boolean isValidBid = new BidValidator(auction, meterRegistry)
-                .isFirstBid()
-                .isBidAmountGreaterThanPreviousBid(bidDto.getAmount())
-                .isBidAmountGreaterThanMinimumBid(bidDto.getAmount())
-                .isConsecutiveBid(bidDto.getBidderId())
-                .validate();
-        if (isValidBid) {
-            Bid savedBid = bidService.save(Bid.builder()
-                    .auctionId(auction.getId())
-                    .bidderId(bidDto.getBidderId())
-                    .amount(bidDto.getAmount())
-                    .build());
-            auction.setWinningBid(savedBid);
-            return true;
-        }
-        return false;
+        return Boolean.TRUE.equals(redisTemplate.execute(new SessionCallback<Boolean>() {
+            @Override
+            public Boolean execute(RedisOperations operations) throws DataAccessException {
+                operations.multi();
+                Auction auction = (Auction) operations.opsForHash().get(String.valueOf(auctionId), String.valueOf(auctionId));
+                if (auction == null) {
+                    auction = auctionRepository.findById(auctionId).orElseThrow();
+                }
+                if (auction.getStatus().equals(Auction.AuctionStatus.UPCOMING)
+                        || auction.getStatus().equals(Auction.AuctionStatus.FINISHED)) {
+                    return false;
+                }
+                boolean isValidBid = new BidValidator(auction, meterRegistry)
+                        .isFirstBid()
+                        .isBidAmountGreaterThanPreviousBid(bidDto.getAmount())
+                        .isBidAmountGreaterThanMinimumBid(bidDto.getAmount())
+                        .isConsecutiveBid(bidDto.getBidderId())
+                        .validate();
+                if (isValidBid) {
+                    Bid savedBid = bidService.save(Bid.builder()
+                            .auctionId(auction.getId())
+                            .bidderId(bidDto.getBidderId())
+                            .amount(bidDto.getAmount())
+                            .build());
+                    auction.setWinningBid(savedBid);
+                    operations.opsForHash().put(String.valueOf(auctionId), String.valueOf(auctionId), auction);
+                    operations.expire(String.valueOf(auctionId), Duration.of(10, ChronoUnit.SECONDS));
+                    return true;
+                }
+                return false;
+            }
+        }));
     }
 
     @Transactional
