@@ -14,6 +14,7 @@
 - Make sure that the server is running separately - you can run the ```AuctioneerApplication.java``` from your IDE directly.
 - Run the test in ```LoadTest.java```
 - The test cleans up after itself.
+- Metrics [here](http://localhost:9090/graph?g0.expr=spring_data_repository_invocations_seconds_max&g0.tab=0&g0.stacked=0&g0.show_exemplars=0&g0.range_input=5m&g1.expr=successful_bid_total&g1.tab=0&g1.stacked=0&g1.show_exemplars=0&g1.range_input=5m&g2.expr=failed_bid_total&g2.tab=0&g2.stacked=0&g2.show_exemplars=0&g2.range_input=5m&g3.expr=outdated_bid_total&g3.tab=0&g3.stacked=0&g3.show_exemplars=0&g3.range_input=15m&g4.expr=http_server_requests_seconds_max&g4.tab=0&g4.stacked=0&g4.show_exemplars=0&g4.range_input=1m)
 
 Note: The above two endpoints are just a temporary hack.
 
