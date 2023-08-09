@@ -21,6 +21,11 @@
 ### prometheus for visualizations - need to be refined
 - ```http://localhost:9090/```
 
+### pg-admin
+- ```http://localhost:5050/```
+- Add the server by referencing details from ```application-docker.properties```
+- Monitor
+
 ## bid
 ```curl
 curl --location 'http://localhost:8080/auctioneer/v1/auctions/1/bid' \
