@@ -1,5 +1,4 @@
-# auctioneer - this approach doesn't work
-Even though the business logic is running under ```redisTemplate``` transaction, the system fails to give consistent results.
+# auctioneer
 
 ## run
 - Requires jdk 11
@@ -7,7 +6,7 @@ Even though the business logic is running under ```redisTemplate``` transaction,
 
 ## docker - for running with prometheus
 - ```mvnw clean install```
-- ```docker build -t auctioneer:latest .```
+- ```docker build -t auctioneer:olrd .```
 - ```docker-compose up```
 - Run the test in ```LoadTest.java```
 

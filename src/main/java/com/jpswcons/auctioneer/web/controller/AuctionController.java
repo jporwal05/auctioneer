@@ -2,11 +2,13 @@ package com.jpswcons.auctioneer.web.controller;
 
 import com.jpswcons.auctioneer.data.entities.Auction;
 import com.jpswcons.auctioneer.services.AuctionService;
+import com.jpswcons.auctioneer.services.BidValidationService;
 import com.jpswcons.auctioneer.web.controller.models.BidDto;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -35,13 +37,25 @@ public class AuctionController {
 
     private final Counter failedBidCounter;
 
+    private final Counter failedBidRedisCounter;
+
+    private final RedisTemplate<String, Object> redisTemplate;
+
+    private final BidValidationService bidValidationService;
+
+
+
     @Autowired
-    public AuctionController(AuctionService auctionService, MeterRegistry meterRegistry) {
+    public AuctionController(AuctionService auctionService, MeterRegistry meterRegistry,
+                             RedisTemplate<String, Object> redisTemplate, BidValidationService bidValidationService) {
         this.auctionService = auctionService;
         this.meterRegistry = meterRegistry;
         this.outdatedBidCounter = meterRegistry.counter("outdated_bid");
         this.successfulBidsCounter = meterRegistry.counter("successful_bid");
         this.failedBidCounter = meterRegistry.counter("failed_bid");
+        this.failedBidRedisCounter = meterRegistry.counter("failed_redis_bid");
+        this.redisTemplate = redisTemplate;
+        this.bidValidationService = bidValidationService;
     }
 
     @GetMapping
@@ -53,13 +67,21 @@ public class AuctionController {
     @PostMapping("/{auctionId}/bid")
     public ResponseEntity<Boolean> placeBid(@PathVariable String auctionId, @RequestBody BidDto bidDto) {
         try {
-            boolean bidPlaced = auctionService.placeBid(Long.parseLong(auctionId), bidDto);
-            if (bidPlaced) {
-                successfulBidsCounter.increment();
-            } else {
-                failedBidCounter.increment();
+            final String aId = String.valueOf(auctionId);
+            // use redis to filter out invalid bids right away
+            // saves db cost
+            Auction redisAuction = (Auction) redisTemplate.opsForHash().get(aId, aId);
+            boolean reVerify = preValidate(redisAuction, bidDto);
+            if (reVerify) {
+                Optional<Auction> auction = auctionService.placeBid(Long.parseLong(auctionId), bidDto);
+                if (auction.isPresent()) {
+                    redisTemplate.opsForHash().put(aId,aId, auction.get());
+                    successfulBidsCounter.increment();
+                } else {
+                    failedBidCounter.increment();
+                }
+                return ResponseEntity.ok(auction.isPresent());
             }
-            return ResponseEntity.ok(bidPlaced);
         } catch (Exception e) {
             if (e instanceof ObjectOptimisticLockingFailureException) {
                 log.warn("Bid outdated: {}", e.getMessage());
@@ -69,6 +91,21 @@ public class AuctionController {
             }
         }
         return ResponseEntity.ok(false);
+    }
+
+    private boolean preValidate(Auction auction, BidDto bidDto) {
+        if (auction != null) {
+            if (auction.getStatus().equals(Auction.AuctionStatus.FINISHED)) {
+                failedBidCounter.increment();
+                return false;
+            }
+            boolean isValidBid = bidValidationService.validate(auction, bidDto);
+            if (!isValidBid) {
+                failedBidRedisCounter.increment();
+                return false;
+            }
+        }
+        return true;
     }
 
     @PostMapping("/{auctionId}/resetWinningBid")
