@@ -1,9 +1,21 @@
 version: "3"
 services:
   auctioneer:
-    image: jporwal05/auctioneer:ol
+    image: jporwal05/auctioneer:olp
+    environment:
+      - "SPRING_PROFILES_ACTIVE=docker"
     ports:
       - "8080:8080"
+  postgres:
+    image: postgres:14.1-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=admin
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
   prometheus:
     image: prom/prometheus
     volumes:
