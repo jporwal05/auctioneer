@@ -6,7 +6,7 @@
 
 ## docker - for running with prometheus
 - ```mvnw clean install```
-- ```docker build -t auctioneer:olrd .```
+- ```docker build -t auctioneer:olrdp .```
 - ```docker-compose up```
 - Run the test in ```LoadTest.java```
 
