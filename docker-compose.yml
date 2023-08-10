@@ -1,7 +1,7 @@
 version: "3"
 services:
   auctioneer:
-    image: jporwal05/auctioneer:olrdp
+    image: jporwal05/auctioneer:olrdpe
     environment:
       - "SPRING_PROFILES_ACTIVE=docker"
     ports:

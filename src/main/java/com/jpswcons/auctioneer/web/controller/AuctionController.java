@@ -3,6 +3,7 @@ package com.jpswcons.auctioneer.web.controller;
 import com.jpswcons.auctioneer.data.entities.Auction;
 import com.jpswcons.auctioneer.services.AuctionService;
 import com.jpswcons.auctioneer.services.BidValidationService;
+import com.jpswcons.auctioneer.services.CompanyService;
 import com.jpswcons.auctioneer.web.controller.models.BidDto;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -19,6 +20,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -44,19 +48,26 @@ public class AuctionController {
 
     private final BidValidationService bidValidationService;
 
+    private final Counter endTimeIncreaseCounter;
+
+    private final CompanyService companyService;
+
 
 
     @Autowired
     public AuctionController(AuctionService auctionService, MeterRegistry meterRegistry,
-                             RedisTemplate<String, Object> redisTemplate, BidValidationService bidValidationService) {
+                             RedisTemplate<String, Object> redisTemplate,
+                             BidValidationService bidValidationService, CompanyService companyService) {
         this.auctionService = auctionService;
         this.meterRegistry = meterRegistry;
         this.outdatedBidCounter = meterRegistry.counter("outdated_bid");
         this.successfulBidsCounter = meterRegistry.counter("successful_bid");
         this.failedBidCounter = meterRegistry.counter("failed_bid");
         this.failedBidRedisCounter = meterRegistry.counter("failed_redis_bid");
+        this.endTimeIncreaseCounter = meterRegistry.counter("end_time_increase");
         this.redisTemplate = redisTemplate;
         this.bidValidationService = bidValidationService;
+        this.companyService = companyService;
     }
 
     @GetMapping
@@ -65,19 +76,29 @@ public class AuctionController {
         return ResponseEntity.of(Optional.of(auctions));
     }
 
+    @GetMapping("/{auctionId}")
+    public ResponseEntity<Auction> getAuction(@PathVariable String auctionId) {
+        Auction auction = auctionService.getAuction(Long.parseLong(auctionId));
+        return ResponseEntity.of(Optional.of(auction));
+    }
+
     @PostMapping("/{auctionId}/bid")
     public ResponseEntity<Boolean> placeBid(@PathVariable String auctionId, @RequestBody BidDto bidDto) {
         try {
-            final String aId = String.valueOf(auctionId);
             // use redis to filter out invalid bids right away
             // saves db cost
-            Auction redisAuction = (Auction) redisTemplate.opsForHash().get(aId, aId);
+            Auction redisAuction = (Auction) redisTemplate.opsForHash().get(auctionId, auctionId);
+            if (redisAuction != null && isLastMinuteBid(redisAuction.getEndTime())) {
+                if (companyService.increaseEndTime(redisAuction.getCompany().getId(), Duration.of(2, ChronoUnit.MINUTES))) {
+                    endTimeIncreaseCounter.increment();
+                }
+            }
             boolean reVerify = preValidate(redisAuction, bidDto);
             if (reVerify) {
                 Optional<Auction> auction = auctionService.placeBid(Long.parseLong(auctionId), bidDto);
                 if (auction.isPresent()) {
-                    redisTemplate.opsForHash().put(aId,aId, auction.get());
-                    redisTemplate.expire(aId, 60, TimeUnit.SECONDS);
+                    redisTemplate.opsForHash().put(auctionId, auctionId, auction.get());
+                    redisTemplate.expire(auctionId, 60, TimeUnit.SECONDS);
                     successfulBidsCounter.increment();
                 } else {
                     failedBidCounter.increment();
@@ -108,6 +129,11 @@ public class AuctionController {
             }
         }
         return true;
+    }
+
+    private boolean isLastMinuteBid(LocalDateTime endTime) {
+        Duration duration =  Duration.between(endTime, LocalDateTime.now());
+        return duration.toMinutes() == 0;
     }
 
     @PostMapping("/{auctionId}/resetWinningBid")

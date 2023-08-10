@@ -1,5 +1,6 @@
 package com.jpswcons.auctioneer;
 
+import com.jpswcons.auctioneer.data.entities.Auction;
 import com.jpswcons.auctioneer.web.controller.models.BidDto;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.HttpEntity;
@@ -29,6 +30,11 @@ public class TestRestUtils {
     public String sendBidReconRequest(long auctionId) {
         return testRestTemplate.getForEntity("http://localhost:" +
                 port + "/auctioneer/v1/auctions/" + auctionId + "/reconcile", String.class).getBody();
+    }
+
+    public Auction getAuction(long auctionId) {
+        return testRestTemplate.getForEntity("http://localhost:" +
+                port + "/auctioneer/v1/auctions/" + auctionId, Auction.class).getBody();
     }
 
     public boolean sendDeleteBidsRequest(long auctionId) {

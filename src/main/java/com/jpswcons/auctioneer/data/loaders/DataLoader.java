@@ -39,7 +39,7 @@ public class DataLoader implements CommandLineRunner {
                         .company(savedCompanies.get(0))
                         .itemName("IC-255")
                         .startTime(LocalDateTime.now())
-                        .endTime(LocalDateTime.now().plusHours(1))
+                        .endTime(LocalDateTime.now().plusMinutes(5))
                         .status(Auction.AuctionStatus.LIVE)
                         .startingPrice(150000)
                         .stepPrice(100).build(),
@@ -47,7 +47,7 @@ public class DataLoader implements CommandLineRunner {
                         .company(savedCompanies.get(1))
                         .itemName("IC-355")
                         .startTime(LocalDateTime.now())
-                        .endTime(LocalDateTime.now().plusHours(1))
+                        .endTime(LocalDateTime.now().plusMinutes(5))
                         .status(Auction.AuctionStatus.LIVE)
                         .startingPrice(200000)
                         .stepPrice(100).build()
