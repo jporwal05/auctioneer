@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 @RestController
 @RequestMapping("/v1/auctions")
@@ -76,6 +77,7 @@ public class AuctionController {
                 Optional<Auction> auction = auctionService.placeBid(Long.parseLong(auctionId), bidDto);
                 if (auction.isPresent()) {
                     redisTemplate.opsForHash().put(aId,aId, auction.get());
+                    redisTemplate.expire(aId, 60, TimeUnit.SECONDS);
                     successfulBidsCounter.increment();
                 } else {
                     failedBidCounter.increment();
