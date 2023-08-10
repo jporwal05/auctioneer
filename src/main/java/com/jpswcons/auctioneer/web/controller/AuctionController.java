@@ -21,11 +21,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Duration;
-import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+
+import static com.jpswcons.auctioneer.utils.AuctioneerUtils.isLastMinuteBid;
 
 @RestController
 @RequestMapping("/v1/auctions")
@@ -110,7 +111,7 @@ public class AuctionController {
                 log.warn("Bid outdated: {}", e.getMessage());
                 outdatedBidCounter.increment();
             } else {
-                log.error("Error placing bid: {}", e.getMessage());
+                log.error("Error placing bid", e);
             }
         }
         return ResponseEntity.ok(false);
@@ -129,11 +130,6 @@ public class AuctionController {
             }
         }
         return true;
-    }
-
-    private boolean isLastMinuteBid(LocalDateTime endTime) {
-        Duration duration =  Duration.between(endTime, LocalDateTime.now());
-        return duration.toMinutes() == 0;
     }
 
     @PostMapping("/{auctionId}/resetWinningBid")

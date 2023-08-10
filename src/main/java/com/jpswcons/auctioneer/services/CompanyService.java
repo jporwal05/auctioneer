@@ -5,9 +5,13 @@ import com.jpswcons.auctioneer.data.repositories.CompanyRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import static com.jpswcons.auctioneer.utils.AuctioneerUtils.isLastMinuteBid;
 
 @Service
 public class CompanyService {
@@ -16,8 +20,6 @@ public class CompanyService {
 
     private final RedisTemplate<String, Object> redisTemplate;
 
-    private final StatusUpdaterService statusUpdaterService;
-
 
     @Autowired
     public CompanyService(CompanyRepository companyRepository,
@@ -25,20 +27,20 @@ public class CompanyService {
                           StatusUpdaterService statusUpdaterService) {
         this.companyRepository = companyRepository;
         this.redisTemplate = redisTemplate;
-        this.statusUpdaterService = statusUpdaterService;
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public boolean increaseEndTime(long companyId, Duration duration) {
+        AtomicBoolean atomicBoolean = new AtomicBoolean();
+        atomicBoolean.set(false);
         Company company = companyRepository.findById(companyId).orElseThrow();
-        company.getAuctions().forEach(auction -> {
+        company.getAuctions().stream().filter(auction -> isLastMinuteBid(auction.getEndTime()))
+                .forEach(auction -> {
+                    atomicBoolean.set(true);
             auction.setEndTime(auction.getEndTime().plus(duration));
-            // update status to LIVE or FINISHED by comparing against now()
-            // this is a workaround to avoid using cron or something similar
-            statusUpdaterService.updateStatus(auction);
             final String aId = String.valueOf(auction.getId());
             redisTemplate.opsForHash().put(aId, aId, auction);
         });
-        return true;
+        return atomicBoolean.get();
     }
 }

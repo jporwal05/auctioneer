@@ -48,7 +48,7 @@ public class LoadTest {
 
         // buffering params
         int startingIndex = 50000; // starting index of the parallel requests
-        int buffer = 2000; // number of parallel requests
+        int buffer = 20000; // number of parallel requests
 
         List<BidDto> bids = new ArrayList<>();
         for (int i = 0; i < numberOfBids; i++) {

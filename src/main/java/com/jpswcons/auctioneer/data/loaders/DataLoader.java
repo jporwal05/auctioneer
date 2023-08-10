@@ -44,7 +44,7 @@ public class DataLoader implements CommandLineRunner {
                         .startingPrice(150000)
                         .stepPrice(100).build(),
                 Auction.builder()
-                        .company(savedCompanies.get(1))
+                        .company(savedCompanies.get(0))
                         .itemName("IC-355")
                         .startTime(LocalDateTime.now())
                         .endTime(LocalDateTime.now().plusMinutes(5))
